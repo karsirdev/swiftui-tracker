@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SwiftUI Tracker</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f7f9;--card:#fff;--tx:#14171c;--mu:#667085;--bd:#e3e6eb;--ac:#f05138;--ok:#16a34a;--bad:#dc2626}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#181b21;--tx:#eceff4;--mu:#98a2b3;--bd:#2a2f38;--ok:#4ade80;--bad:#f87171}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#181b21;--tx:#eceff4;--mu:#98a2b3;--bd:#2a2f38;--ok:#4ade80;--bad:#f87171}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.stats{display:flex;gap:10px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 14px;text-align:center}
+.stat b{display:block;font-size:20px}.stat span{color:var(--mu);font-size:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.daily{border-color:var(--ac)}
+.lbl{font-size:12px;color:var(--ac);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.item h3{margin:0 0 2px;font-size:16px}
+.item p{margin:0 0 8px;color:var(--mu);white-space:pre-wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--bd);border-radius:6px;padding:1px 7px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 12px;cursor:pointer}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+button.d{color:var(--bad)}
+.done{opacity:.85}.done h3::before{content:"✓ ";color:var(--ok)}
+.tabs{display:flex;gap:6px;margin:16px 0 12px}
+.tabs button.on{background:var(--tx);color:var(--bg)}
+dialog{border:1px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);width:min(560px,94vw);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:block;font-weight:600;margin:10px 0 4px}
+input,textarea{width:100%;font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px}
+textarea{font-family:ui-monospace,Menlo,monospace;font-size:13px;min-height:90px;resize:vertical}
+#code{min-height:240px;white-space:pre;overflow:auto}
+.msg{margin-top:10px;font-size:14px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.datebar{display:flex;gap:8px;align-items:center;margin:4px 0 14px;flex-wrap:wrap}.datebar input{width:auto}.datebar .sum{color:var(--mu);font-size:13px}
+.sg{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--bd)}.sg:first-of-type{border-top:0}.sg details{flex:1}.sg summary{cursor:pointer;font-weight:600}.sg pre{margin:6px 0 0;white-space:pre-wrap;font:inherit;color:var(--mu)}
+.empty{text-align:center;color:var(--mu);padding:30px}
+</style></head><body><main>
+<div class="top"><h1>🍎 SwiftUI Tracker</h1>
+<div class="stats"><div class="stat"><b id="streak">0</b><span>🔥 streak</span></div><div class="stat"><b id="cnt">0/0</b><span>hoàn thành</span></div></div></div>
+
+<div class="datebar"><button id="prev">←</button><input type="date" id="dp"><button id="next">→</button><button id="today">Hôm nay</button><span class="sum" id="sum"></span></div>
+<div class="card daily"><div class="lbl" id="dl"></div><div id="dlist"></div><button class="p" id="dadd" style="margin-top:8px"></button></div>
+
+<div class="row" style="justify-content:space-between"><div class="tabs" style="margin:0"><button data-f="all" class="on">Tất cả</button><button data-f="todo">Chưa xong</button><button data-f="done">Đã xong</button></div><button class="p" id="new">+ Bài mới</button></div>
+<div id="list" style="margin-top:12px"></div>
+
+<dialog id="fd"><h3 id="fh" style="margin:0">Bài tập</h3>
+<label>Tên bài</label><input id="ft">
+<label>Đặc tả yêu cầu (ngắn gọn, kiểu SRS)</label><textarea id="fdesc" style="min-height:260px"></textarea>
+<label>Yêu cầu bắt buộc trong code (mỗi dòng 1 từ khóa, vd: @State)</label><textarea id="freq"></textarea>
+<div class="msg bad" id="fmsg"></div>
+<div class="row" style="margin-top:14px;justify-content:flex-end"><button id="fc">Hủy</button><button class="p" id="fs">Lưu</button></div></dialog>
+
+<dialog id="cd"><p id="cm" style="margin:0 0 14px"></p><div class="row" style="justify-content:flex-end"><button id="cn">Hủy</button><button class="p" id="cy">Xóa</button></div></dialog>
+<dialog id="sd"><h3 id="sh" style="margin:0">Nộp code</h3><div class="chips" id="sc" style="margin-top:8px"></div>
+<textarea id="code" placeholder="Dán source code Swift vào đây..." spellcheck="false"></textarea><div class="msg" id="smsg"></div>
+<div class="row" style="margin-top:14px;justify-content:flex-end"><button id="sx">Đóng</button><button class="p" id="sb">Nộp</button></div></dialog>
+</main>
+<script>
+const SRS=(g,f,n,a)=>"Mục tiêu: "+g+"\nYêu cầu chức năng:\n"+f.map((x,i)=>"FR"+(i+1)+". "+x).join("\n")+"\nYêu cầu phi chức năng:\n"+n.map((x,i)=>"NFR"+(i+1)+". "+x).join("\n")+"\nNghiệm thu:\n"+a.map((x,i)=>"AC"+(i+1)+". "+x).join("\n");
+const POOL=([["Counter app", "App đếm số một màn hình, quản lý state bằng @State.", ["Hiển thị giá trị hiện tại cỡ lớn, khởi tạo bằng 0", "Nút + tăng 1, nút − giảm 1", "Nút Reset đưa về 0", "Giá trị âm hiển thị màu đỏ"], ["State khai báo private", "Thay đổi giá trị có animation"], ["Bấm − từ 0 hiện -1 màu đỏ", "Reset về 0 và màu trở lại bình thường", "Có #Preview chạy được"], ["import SwiftUI", "@State", "Button", "VStack"]], ["Profile card", "Thẻ hồ sơ tĩnh dựng bằng stack.", ["Avatar tròn dùng SF Symbol", "Hiển thị tên và bio tối đa 3 dòng", "3 nút social xếp ngang, cách đều", "Nền thẻ bo góc có đổ bóng"], ["Dùng HStack/VStack/Spacer, không hard-code vị trí", "Hỗ trợ Dark mode"], ["Không vỡ layout trên iPhone SE và Pro Max", "Bio dài vẫn được cắt gọn"], ["import SwiftUI", "Image(systemName", "HStack", "VStack", "Spacer"]], ["Tip calculator", "Tính tiền tip, luyện binding hai chiều.", ["Nhập số tiền bằng TextField bàn phím số", "Chọn % tip (10/15/20) bằng Picker", "Hiển thị tiền tip và tổng, cập nhật realtime", "Tùy chọn chia đều cho N người"], ["Dùng binding $, không có nút Tính", "Làm tròn 2 chữ số thập phân"], ["100 với 15% ra tip 15, tổng 115", "Để trống hoặc nhập chữ không crash"], ["TextField", "$", "Picker", "@State"]], ["Toggle theme", "Chuyển giao diện Light/Dark cho toàn app.", ["Toggle bật/tắt Dark mode", "Lưu lựa chọn bằng @AppStorage", "Áp dụng bằng preferredColorScheme ở root view", "Icon mặt trời/mặt trăng theo trạng thái"], ["Áp dụng mọi màn hình, không chỉ view hiện tại", "Không dùng UserDefaults thủ công"], ["Tắt hẳn app rồi mở lại vẫn giữ theme", "Đổi theme có animation"], ["@AppStorage", "preferredColorScheme", "Toggle"]], ["Todo list", "Quản lý việc cần làm (CRUD cơ bản).", ["Thêm việc từ TextField, bỏ qua chuỗi rỗng", "Chạm để đánh dấu hoàn thành (gạch ngang chữ)", "Vuốt để xóa bằng swipeActions", "Việc chưa xong xếp lên trước", "Model là struct tuân thủ Identifiable"], ["ForEach dùng id ổn định, không dùng index", "Tách TodoItem thành file riêng"], ["Thêm 3 việc, xóa 1, tick 1 hiển thị đúng", "Không thêm được việc rỗng"], ["List", "ForEach", "Identifiable", "swipeActions"]], ["Contacts app", "Luyện điều hướng list → chi tiết → sửa.", ["Danh sách liên hệ (tên, số điện thoại) trong NavigationStack", "Chạm dòng mở màn chi tiết bằng NavigationLink", "Nút Sửa mở .sheet chứa form chỉnh sửa", "Lưu sửa đổi qua @Binding rồi đóng sheet", "Nút thêm liên hệ mới"], ["Một nguồn dữ liệu duy nhất (single source of truth)", "Có nút Hủy khi sửa"], ["Sửa tên xong list cập nhật ngay", "Hủy thì dữ liệu không đổi"], ["NavigationStack", "NavigationLink", "@Binding", ".sheet"]], ["Settings screen", "Màn hình cài đặt dùng Form chuẩn iOS.", ["Ít nhất 2 Section có header", "Toggle bật thông báo", "Stepper chọn cỡ chữ (12-24)", "DatePicker chọn giờ nhắc", "Hiện giá trị đang chọn cạnh control"], ["Dùng control gốc, không tự vẽ", "Thiết lập lưu bằng @State hoặc @AppStorage"], ["Mỗi control đổi được giá trị và UI phản hồi", "Stepper không vượt giới hạn"], ["Form", "Section", "Toggle", "Stepper", "DatePicker"]], ["Tab app 3 tab", "App 3 tab và chia sẻ dữ liệu giữa các tab.", ["TabView gồm Home, Search, Profile", "Mỗi tab có icon SF Symbol và tiêu đề (tabItem)", "Home hiển thị một giá trị dùng chung", "Profile chỉnh được giá trị đó", "Tab Search có ô tìm kiếm"], ["Dữ liệu chung đặt ở view cha hoặc @Environment", "Mặc định mở tab Home"], ["Chuyển tab không mất state", "Sửa ở Profile thì Home đổi theo"], ["TabView", "tabItem"]], ["Todo MVVM", "Tách logic khỏi View theo MVVM.", ["ViewModel là ObservableObject, thuộc tính @Published", "View giữ ViewModel bằng @StateObject", "Thêm/xóa/tick nằm trong ViewModel", "View chỉ hiển thị và gọi hàm của ViewModel"], ["ViewModel không import SwiftUI", "Test được ViewModel độc lập"], ["Hành vi giống bản Todo cũ", "Có 2 unit test cho ViewModel"], ["ObservableObject", "@Published", "@StateObject"]], ["Weather/Movie app", "Gọi API thật và xử lý đủ trạng thái.", ["Gọi API bằng async/await + URLSession", "Giải mã JSON bằng Codable", "Gọi trong .task khi màn hình xuất hiện", "Hiển thị loading, lỗi, thành công", "Nút thử lại khi lỗi"], ["API key không commit lên git", "Có timeout, không chặn main thread"], ["Tắt mạng hiện lỗi, bật lại bấm thử lại được", "Dữ liệu hiện đúng thành phố/phim"], ["async", "await", "URLSession", "Codable", ".task"]], ["Search + debounce", "Tìm kiếm realtime không gọi quá nhiều.", [".searchable gắn vào list", "Debounce ~300ms bằng Task + sleep", "Hủy Task cũ khi người dùng gõ tiếp", "Trạng thái rỗng khi không có kết quả"], ["Không tìm kiếm ở mỗi phím gõ", "Xử lý CancellationError"], ["Gõ nhanh 5 ký tự chỉ phát sinh 1 lần tìm", "Xóa ô tìm kiếm trả về danh sách đầy đủ"], [".searchable", "Task", "sleep"]], ["Infinite scroll", "Phân trang khi cuộn.", ["Danh sách trong ScrollView + LazyVStack", "Tải trang kế khi dòng gần cuối xuất hiện (onAppear)", "ProgressView ở cuối khi đang tải", "Dừng tải khi hết dữ liệu"], ["Không tải trùng trang khi cuộn nhanh", "Dùng cờ isLoading"], ["Cuộn hết 3 trang không lặp dòng", "Hết dữ liệu hiện chữ 'Đã hết'"], ["LazyVStack", "onAppear"]], ["Notes với SwiftData", "Ghi chú lưu bền vững bằng SwiftData.", ["Model gắn @Model (tiêu đề, nội dung, ngày tạo)", "Đọc dữ liệu bằng @Query", "Thêm, sửa, xóa qua modelContext", "Sắp xếp theo ngày mới nhất", "Lọc theo từ khóa"], ["Cấu hình modelContainer ở App", "Không giữ bản sao dữ liệu trong @State"], ["Tắt mở app ghi chú vẫn còn", "Xóa ghi chú thì biến mất khỏi list"], ["import SwiftData", "@Model", "@Query", "modelContext"]], ["Expense chart", "Theo dõi chi tiêu và trực quan hóa.", ["Nhập khoản chi: số tiền, danh mục, ngày", "Danh sách khoản chi theo tháng", "Biểu đồ cột (BarMark) tổng theo danh mục", "Chọn tháng để lọc", "Hiển thị tổng chi của tháng"], ["import Charts, dữ liệu là struct Identifiable", "Định dạng tiền theo locale"], ["Đổi tháng thì biểu đồ và tổng đổi theo", "Tháng không có dữ liệu hiện trạng thái rỗng"], ["import Charts", "Chart", "BarMark"]], ["Rating stars", "Component đánh giá sao tái sử dụng.", ["Nhận @Binding<Int> làm giá trị", "Vẽ 5 sao bằng ForEach", "Chạm sao n đặt điểm n, chạm lại để xóa", "Sao đã chọn tô vàng"], ["Không phụ thuộc view cha", "Có tham số maxRating (mặc định 5)"], ["Dùng ở 2 nơi với state riêng đều chạy", "Preview hiển thị đúng"], ["@Binding", "ForEach", "Image(systemName"]], ["Onboarding animation", "Onboarding nhiều trang có animation.", ["3+ trang vuốt ngang bằng TabView", "Chấm báo trang hiện tại", "Nút Tiếp, Bỏ qua và Bắt đầu ở trang cuối", "Chuyển trang bằng withAnimation/transition"], ["Mỗi trang là một struct riêng", "Chỉ hiện onboarding lần đầu (@AppStorage)"], ["Bấm Bắt đầu vào màn chính", "Mở lại app không hiện onboarding nữa"], ["withAnimation", "transition", "TabView"]], ["Login flow + Keychain", "Đăng nhập và lưu token an toàn.", ["Form email + SecureField mật khẩu", "Kiểm tra email hợp lệ, mật khẩu ≥ 6 ký tự", "Lưu token vào Keychain (SecItemAdd)", "Mở app đọc token (SecItemCopyMatching) để tự đăng nhập", "Đăng xuất xóa token"], ["Không lưu token trong UserDefaults", "Không log mật khẩu/token"], ["Đăng nhập, tắt mở app vẫn còn đăng nhập", "Đăng xuất rồi mở app quay về màn đăng nhập"], ["SecItemAdd", "SecItemCopyMatching", "SecureField"]], ["Widget", "Widget hiển thị dữ liệu từ app.", ["Widget cỡ small (medium nếu muốn)", "TimelineProvider cung cấp entry", "Dữ liệu chia sẻ từ app qua App Group", "Nhấn widget mở app"], ["Timeline cập nhật ít nhất mỗi giờ", "Có placeholder khi chưa có dữ liệu"], ["Widget hiện đúng dữ liệu trên Home Screen", "Đổi dữ liệu trong app thì widget cập nhật"], ["import WidgetKit", "TimelineProvider", "@main"]]]).map(([t,g,f,n,a,k])=>[t,SRS(g,f,n,a),k]);
+const K="swiftui-tracker-v1";
+let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+S=S||{items:[],days:[]};
+S.items.forEach(i=>{if(!i.date)i.date=i.day||i.doneAt||day();const t=POOL.find(x=>x[0]===i.title);if(t&&!/AC1\./.test(i.desc||"")){i.desc=t[1]}});
+let sel=day();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+function day(d=new Date()){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const TPL="Mục tiêu: \nYêu cầu chức năng:\nFR1. \nFR2. \nYêu cầu phi chức năng:\nNFR1. \nNghiệm thu:\nAC1. ";
+let delId=null;
+let filter="all",editId=null,subId=null;
+
+function streak(){
+  const set=new Set(S.days);let d=new Date();
+  if(!set.has(day(d)))d.setDate(d.getDate()-1);
+  let n=0;while(set.has(day(d))){n++;d.setDate(d.getDate()-1)}return n;
+}
+const picks=()=>{const[y,m,d]=sel.split("-").map(Number);const n=Math.floor(Date.UTC(y,m-1,d)/864e5);return[0,1,2,3,4].map(k=>POOL[(n*5+k)%POOL.length])};
+const fmt=d=>d.split("-").reverse().join("/");
+const shift=n=>{const[y,m,d]=sel.split("-").map(Number);sel=day(new Date(y,m-1,d+n));render()};
+const fd=s=>esc(s).replace(/^(Mục tiêu|Yêu cầu chức năng|Yêu cầu phi chức năng|Nghiệm thu):/gm,"<b>$1:</b>");
+const chips=a=>a.map(t=>`<span class="chip">${esc(t)}</span>`).join("");
+
+function render(){
+  $("streak").textContent=streak();
+  const DI=S.items.filter(i=>i.date===sel);const dn=DI.filter(i=>i.done).length;$("cnt").textContent=dn+"/"+DI.length;
+  $("dp").value=sel;$("sum").textContent=(sel===day()?"Hôm nay · ":"")+fmt(sel)+": "+dn+"/"+DI.length+" bài · mục tiêu ≥5";
+  $("dl").textContent=sel===day()?"5 bài gợi ý hôm nay":"5 bài gợi ý ngày "+fmt(sel);
+  const P=picks(),has=t=>DI.some(i=>i.title===t[0]);
+  $("dlist").innerHTML=P.map((t,k)=>`<div class="sg"><details><summary>${esc(t[0])}</summary><pre>${fd(t[1])}</pre></details><button data-s="${k}" ${has(t)?"disabled":""}>${has(t)?"Đã thêm":"+ Thêm"}</button></div>`).join("");
+  const rest=P.filter(t=>!has(t)).length;$("dadd").disabled=!rest;$("dadd").textContent=rest?"+ Thêm cả "+rest+" bài còn lại":"Đã thêm đủ 5 bài";
+  const L=DI.filter(i=>filter==="all"||(filter==="done")===!!i.done);
+  $("list").innerHTML=L.length?L.map(i=>`<div class="card item ${i.done?"done":""}"><h3>${esc(i.title)}</h3><p>${fd(i.desc||"")}</p><div class="chips">${chips(i.req)}</div>
+  <div class="row"><button class="p" data-a="sub" data-i="${i.id}">${i.done?"Nộp lại":"Nộp code"}</button><button data-a="edit" data-i="${i.id}">Sửa</button><button class="d" data-a="del" data-i="${i.id}">Xóa</button>${i.done?`<span style="color:var(--mu);font-size:13px">Nộp ngày ${i.doneAt}</span>`:""}</div></div>`).join(""):`<div class="empty">Ngày này chưa có bài nào. Thêm bài mới hoặc lấy bài gợi ý!</div>`;
+}
+function addItem(title,desc,req,fromDaily){
+  S.items.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),title,desc,req,done:false,date:sel});save();render();
+}
+$("prev").onclick=()=>shift(-1);$("next").onclick=()=>shift(1);$("today").onclick=()=>{sel=day();render()};
+$("dp").onchange=e=>{if(e.target.value){sel=e.target.value;render()}};
+$("dadd").onclick=()=>picks().forEach(t=>{if(!S.items.some(i=>i.title===t[0]&&i.date===sel))addItem(t[0],t[1],t[2].slice())});
+$("dlist").onclick=e=>{const b=e.target.closest("button[data-s]");if(!b)return;const t=picks()[b.dataset.s];addItem(t[0],t[1],t[2].slice())};
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{filter=b.dataset.f;document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));render()});
+$("new").onclick=()=>{editId=null;$("fh").textContent="Bài mới";$("fmsg").textContent="";$("ft").value=$("freq").value="";$("fdesc").value=TPL;$("fd").showModal()};
+$("fc").onclick=()=>$("fd").close();
+$("fs").onclick=()=>{
+  const t=$("ft").value.trim();const dsc=$("fdesc").value;
+  if(!t){$("ft").focus();return}
+  if(!/Mục tiêu:\s*\S/.test(dsc)||(dsc.match(/^FR\d+\.\s*\S/gm)||[]).length<2||!/^AC\d+\.\s*\S/m.test(dsc)){$("fmsg").textContent="Đặc tả cần: Mục tiêu, ít nhất 2 dòng FR (FR1. ...) và ít nhất 1 dòng AC (AC1. ...).";return}
+  $("fmsg").textContent="";
+  const req=$("freq").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(editId){const i=S.items.find(x=>x.id===editId);i.title=t;i.desc=$("fdesc").value;i.req=req;i.done=false;i.doneAt=null;save();render()}
+  else addItem(t,$("fdesc").value,req,false);
+  $("fd").close();
+};
+$("list").onclick=e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const i=S.items.find(x=>x.id===b.dataset.i);if(!i)return;
+  if(b.dataset.a==="del"){delId=i.id;$("cm").textContent="Xóa bài \""+i.title+"\"? Không thể hoàn tác.";$("cd").showModal()}
+  if(b.dataset.a==="edit"){editId=i.id;$("fh").textContent="Sửa bài";$("fmsg").textContent="";$("ft").value=i.title;$("fdesc").value=i.desc||"";$("freq").value=i.req.join("\n");$("fd").showModal()}
+  if(b.dataset.a==="sub"){subId=i.id;$("sh").textContent="Nộp: "+i.title;$("sc").innerHTML=chips(i.req);$("code").value=i.code||"";$("smsg").textContent="";$("sd").showModal()}
+};
+$("cn").onclick=()=>$("cd").close();
+$("cy").onclick=()=>{S.items=S.items.filter(x=>x.id!==delId);save();render();$("cd").close()};
+$("sx").onclick=()=>$("sd").close();
+$("sb").onclick=()=>{
+  const i=S.items.find(x=>x.id===subId),c=$("code").value;
+  if(c.trim().split("\n").length<3){$("smsg").className="msg bad";$("smsg").textContent="Code quá ngắn, hãy dán toàn bộ source.";return}
+  const miss=i.req.filter(t=>!c.includes(t));
+  if(miss.length){$("smsg").className="msg bad";$("smsg").textContent="Chưa đạt. Thiếu: "+miss.join(", ");return}
+  i.done=true;i.doneAt=day();i.code=c;if(!S.days.includes(day()))S.days.push(day());
+  save();render();$("smsg").className="msg ok";$("smsg").textContent="🎉 Đạt yêu cầu! Bài đã hoàn thành.";
+  setTimeout(()=>$("sd").close(),900);
+};
+render();
+</script></body></html>
